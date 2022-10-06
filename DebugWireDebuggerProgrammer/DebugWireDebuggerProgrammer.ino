@@ -1312,7 +1312,7 @@ void printDebugCommands () {
       "  CMD=xxxx      Send sequence of bytes xxxx... and show response\n"
       "  FWxxxx        Print 32 Word Values (64 bytes) from Flash addr xxxx\n"
       "  FBxxxx        Print 64 Byte Values from Flash addr xxxx and decode ASCII\n"
-      "  LISTxxxx      Disassemble 16 words (32 bytes) from Flash addr xxxx\n"
+      "  Lxxxx         Disassemble 16 words (32 bytes) from Flash addr xxxx\n"
       "  RUN           Start Execution at Current Value of PC (use BREAK to stop)\n"
       "  RUNxxxx       Start Execution at xxxx (use BREAK to stop)\n"
       "  RUNxxxx yyyy  Start Execution at xxxx with a Breakpoint set at yyyy\n"
