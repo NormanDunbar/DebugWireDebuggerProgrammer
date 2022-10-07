@@ -19,10 +19,9 @@
 //    TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 //
 
-#include <avr/io.h>
-#include <avr/interrupt.h>
-#include <avr/pgmspace.h>
-#include "OnePinSerial.h"
+#include <Arduino.h>
+#include "DebugWireProgrammer.h"
+
 
 //  ATTiny85 Pinout
 //
@@ -46,12 +45,14 @@
 //  an ATTiny85, but can be reconfigured to control other AVR-Series 8 Bit Microcontrollers.  The code starts
 //  up in In-System Programming mode, which has only a few single letter commands:
 //
-//    e            Erase Flash and EEPROM Memory
+//    e            Erase Flash and EEPROM Memory (NOT IMPLEMENTED)
 //    cxxxxxxxx   Send arbitrary 4 byte (xxxxxxxx) command sequence
-//    i           Identify part type
+//    i           Identify part type (NOT IMPLEMENTED)
 //    f           Print current fuse settings for chip
 //    +           Enable debugWire Fuse
 //    -           Disable debugWire Fuse
+//    8           Enable CKDIV8 (divide clock by 8)
+//    1           Disable CKDIV8
 //    p           Turn on power to chip (used to run code)
 //    o           Switch off power to chip
 //    b           Cycle Vcc and Send BREAK to engage debugWire Mode (debugWire Fuse must be enabled) 
@@ -128,10 +129,10 @@
 //  The debugWire Protocol
 //
 //  To use the debugWire protocol you must first enable debugWire Mode by using the In-System commands to 
-//  clear the DWEN (DebugWIRE enabled) Fues.  On the ATTiny85, this means clearing bit 6 of the High Fuse
-//  byte and cycling Vcc so the new fuese setting can take effect.  Note: once DWEN is enabled In-Syetem
-//  Programming is no longer accessble via the conventional way (pulling RESET low) because debugWire is
-//  now using the RESET pin.  Howwver, you can temporarily disable debugWire by sending a 0x06 byte on the
+//  clear the DWEN (DebugWIRE enabled) Fuse.  On the ATTiny85, this means clearing bit 6 of the High Fuse
+//  byte and cycling Vcc so the new fuse setting can take effect.  Note: once DWEN is enabled In-System
+//  Programming is no longer accessable via the conventional way (pulling RESET low) because debugWire is
+//  now using the RESET pin.  However, you can temporarily disable debugWire by sending a 0x06 byte on the
 //  RESET line, then taking RESET LOW to enter in-System Programming Mode and clearing DWEN by setting bit
 //  6 of the High Fuse byte.  This can be down with the following sequence of text commands:
 //
@@ -283,7 +284,9 @@
 //      1 = 0   Brown-out Detector trigger level bit 1
 //      0 = 1   Brown-out Detector trigger level bit 0
 
-#define DEVELOPER 0
+// Set to zero to disable developer commands. The deafult
+// is zero. I changed it.
+#define DEVELOPER 1
 
 #define PMODE    8    // Input - HIGH = Program Mode, LOW = Debug Mode
 #define VCC      9    // Target Pin 8 - Vcc
@@ -1292,47 +1295,48 @@ void setBp (unsigned int bp) {
 
 void printDebugCommands () {
     print(F(
-      "Debugging Commands:\n"
+      "\nDebugging Commands:\n"
       "  HELP          Print this menu\n"
-      "  REGS          Print All Registers 0-31\n"
-      "  Rdd           Print Value of Reg dd (dd is a decimal value from 0 - 31)\n"
-      "  Rdd=xx        Set Reg dd to New Value xx (dd is a decimal value from 0 - 31)\n"
-      "  IOxx          Print Value of I/O space location xx\n"
-      "  IOxx=yy       Set I/O space location xx to new value yy\n"
-      "  IOxx.d=b      Change bit d (0-7) in I/O location xx to value b (1 or 0)\n"
-      "  SRAMxxxx      Read and Print 32 bytes from SRAM address xxxx\n"
-      "  SBxxxx        Print Byte Value of SRAM location xxxx\n"
-      "  SBxxxx=yy     Set SRAM location xxxx to new byte value yy\n"
-      "  SWxxxx        Print Word Value of SRAM location xxxx\n"
-      "  SWxxxx=yyyy   Set SRAM location xxxx to new word value yyyy\n"
+      "\n"
+      "  BREAK         Send Async BREAK to Target (stops execution)\n"
+      "  CMD=xxxx      Send sequence of bytes xxxx... and show response\n"
       "  EBxxxx        Print Byte Value of EEPROM location xxxx\n"
       "  EBxxxx=yy     Set EEPROM location xxxx to new byte value yy\n"
       "  EWxxxx        Print Word Value of EEPROM location xxxx\n"
       "  EWxxxx=yyyy   Set EEPROM location xxxx to new word value yyyy\n"
-      "  CMD=xxxx      Send sequence of bytes xxxx... and show response\n"
+      "  EXIT          Exit from debugWire mode back to In-System\n"
       "  FWxxxx        Print 32 Word Values (64 bytes) from Flash addr xxxx\n"
       "  FBxxxx        Print 64 Byte Values from Flash addr xxxx and decode ASCII\n"
+      "  IOxx          Print Value of I/O space location xx\n"
+      "  IOxx=yy       Set I/O space location xx to new value yy\n"
+      "  IOxx.d=b      Change bit d (0-7) in I/O location xx to value b (1 or 0)\n"
       "  Lxxxx         Disassemble 16 words (32 bytes) from Flash addr xxxx\n"
+      "  PC            Read and Print Program Counter\n"
+      "  PC=xxxx       Set Program Counter to xxxx\n"
+      "  Rdd           Print Value of Reg dd (dd is a decimal value from 0 - 31)\n"
+      "  Rdd=xx        Set Reg dd to New Value xx (dd is a decimal value from 0 - 31)\n"
+      "  REGS          Print All Registers 0-31\n"
+      "  RESET         Reset Target\n"
       "  RUN           Start Execution at Current Value of PC (use BREAK to stop)\n"
       "  RUNxxxx       Start Execution at xxxx (use BREAK to stop)\n"
       "  RUNxxxx yyyy  Start Execution at xxxx with a Breakpoint set at yyyy\n"
       "  RUN xxxx      Start Execution at Current Value of PC with breakpoint at xxxx\n"
-      "  BREAK         Send Async BREAK to Target (stops execution)\n"
-      "  STEP          Single Step One Instruction at Current PC\n"
-      "  RESET         Reset Target\n"
-      "  EXIT          Exit from debugWire mode back to In-System\n"
-      "  PC            Read and Print Program Counter\n"
-      "  PC=xxxx       Set Program Counter to xxxx\n"
+      "  SBxxxx        Print Byte Value of SRAM location xxxx\n"
+      "  SBxxxx=yy     Set SRAM location xxxx to new byte value yy\n"
       "  SIG           Read and Print Device Signature\n"
+      "  SRAMxxxx      Read and Print 32 bytes from SRAM address xxxx\n"
+      "  STEP          Single Step One Instruction at Current PC\n"
+      "  SWxxxx        Print Word Value of SRAM location xxxx\n"
+      "  SWxxxx=yyyy   Set SRAM location xxxx to new word value yyyy\n"
 #if DEVELOPER
-      "Developer Commands:\n"
-      "  CMD=xxxx      Send Sequence of Bytes xxxx... and show response\n"
+      "\nDeveloper Commands:\n"
       "  BP            Read and Print Breakpoint Register\n"
-      "  BP=xxxx       Set Breakpoint Register to xxxxe\n"
-      "  EXEC=xxxx     Execute Current Instruction opcode xxxxe\n"
-      "  RAMSET        Init first 32 bytes of SRAMe\n"
-      "  Dxxxx         Disassemble single word instruction opcode xxxxe\n"
-      "  Dxxxx yyyy    Disassemble two word instruction opcode xxxx + yyyye\n"
+      "  BP=xxxx       Set Breakpoint Register to xxxx\n"
+      "  CMD=xxxx      Send Sequence of Bytes xxxx... and show response\n"
+      "  Dxxxx         Disassemble single word instruction opcode xxxx\n"
+      "  Dxxxx yyyy    Disassemble two word instruction opcode xxxx + yyyy\n"
+      "  EXEC=xxxx     Execute Current Instruction opcode xxxx\n"
+      "  RAMSET        Init first 32 bytes of SRAM\n"
 #endif
   ));
 }
@@ -3107,3 +3111,4 @@ void avrisp () {
     1111 110r rrrr 0bbb  sbrc
     1111 111r rrrr 0bbb  sbrs
 */
+
