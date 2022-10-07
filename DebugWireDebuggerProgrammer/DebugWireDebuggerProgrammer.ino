@@ -1324,6 +1324,7 @@ void printDebugCommands () {
       "  SBxxxx        Print Byte Value of SRAM location xxxx\n"
       "  SBxxxx=yy     Set SRAM location xxxx to new byte value yy\n"
       "  SIG           Read and Print Device Signature\n"
+      "  SRAM          Prints SRAM size in bytes, and base address in hexadecimal\n"
       "  SRAMxxxx      Read and Print 32 bytes from SRAM address xxxx\n"
       "  STEP          Single Step One Instruction at Current PC\n"
       "  SWxxxx        Print Word Value of SRAM location xxxx\n"
@@ -1392,6 +1393,13 @@ void debugger () {
       }
       if (bufMatches(F("HELP"))) {                        // HELP - Prints menu of debug commands
         printDebugCommands();
+      } else if (bufMatches(F("SRAM"))) {                 // SRAM - Prints SRAM details.
+        echoCmd();
+        Serial.print(ramSize, DEC);
+        println(F(" bytes"));
+        print(F("SRBase: 0x"));
+        printHex16(ramBase);
+        println();
       } else if (bufMatches(F("PC"))) {                   // PC - Read and Print Internal Value of Program Counter
         echoCmd();
         printHex16(pcSave);
